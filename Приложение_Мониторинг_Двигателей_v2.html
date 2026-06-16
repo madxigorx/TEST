@@ -1,0 +1,2077 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Мониторинг электродвигателей</title>
+<style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0b1020;
+        --surface: rgba(255, 255, 255, 0.06);
+        --surface2: rgba(255, 255, 255, 0.1);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.68);
+        --border: rgba(255, 255, 255, 0.14);
+        --focus: rgba(128, 203, 255, 0.9);
+        --danger: #ff6b6b;
+        --success: #51cf66;
+        --warning: #ffa94d;
+        --shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+        --radius: 14px;
+      }
+
+      [data-theme="light"] {
+        --bg: #f5f7fb;
+        --surface: rgba(0, 0, 0, 0.035);
+        --surface2: rgba(0, 0, 0, 0.06);
+        --text: rgba(0, 0, 0, 0.9);
+        --muted: rgba(0, 0, 0, 0.62);
+        --border: rgba(0, 0, 0, 0.12);
+        --focus: rgba(33, 150, 243, 0.65);
+        --danger: #d32f2f;
+        --success: #2e7d32;
+        --warning: #f57c00;
+        --shadow: 0 14px 36px rgba(9, 30, 66, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Helvetica,
+          Arial,
+          "Apple Color Emoji",
+          "Segoe UI Emoji";
+        color: var(--text);
+        background:
+          radial-gradient(1100px 700px at 10% 0%, rgba(88, 101, 242, 0.25), transparent 60%),
+          radial-gradient(900px 600px at 90% 10%, rgba(0, 212, 255, 0.18), transparent 55%),
+          radial-gradient(900px 600px at 50% 100%, rgba(255, 255, 255, 0.12), transparent 55%),
+          var(--bg);
+        transition: background 0.3s ease;
+      }
+
+      .container {
+        width: min(1100px, calc(100% - 32px));
+        margin: 24px auto 64px;
+      }
+
+      header {
+        display: grid;
+        gap: 10px;
+        padding: 18px 18px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: linear-gradient(180deg, var(--surface), transparent);
+        box-shadow: var(--shadow);
+        position: relative;
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: clamp(20px, 3vw, 28px);
+        letter-spacing: -0.02em;
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+
+      .theme-toggle {
+        position: absolute;
+        top: 18px;
+        right: 18px;
+        appearance: none;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 8px 14px;
+        background: color-mix(in oklab, var(--surface2), transparent 20%);
+        color: var(--text);
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 120ms ease;
+      }
+
+      .theme-toggle:hover {
+        background: color-mix(in oklab, var(--surface2), transparent 0%);
+      }
+
+      .grid {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: linear-gradient(180deg, var(--surface), transparent);
+        box-shadow: var(--shadow);
+      }
+
+      .card__header {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .card__header h2 {
+        margin: 0;
+        font-size: 16px;
+        letter-spacing: -0.01em;
+      }
+
+      .card__body {
+        padding: 14px 16px 16px;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: linear-gradient(180deg, var(--surface), transparent);
+        box-shadow: var(--shadow);
+        margin-top: 14px;
+      }
+
+      .tab {
+        appearance: none;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 8px 12px;
+        background: color-mix(in oklab, var(--surface2), transparent 20%);
+        color: var(--text);
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .tab[aria-selected="true"] {
+        border-color: color-mix(in oklab, var(--focus), var(--border) 55%);
+        background: color-mix(in oklab, var(--focus), transparent 84%);
+      }
+
+      .tab-panels {
+        margin-top: 14px;
+        display: grid;
+        gap: 14px;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      form {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      @media (min-width: 860px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .form-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .span-2 {
+          grid-column: span 2;
+        }
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text);
+        outline: none;
+        box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+        transition:
+          border-color 120ms ease,
+          box-shadow 120ms ease,
+          background 120ms ease;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 88px;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--focus);
+        box-shadow: 0 0 0 4px color-mix(in oklab, var(--focus), transparent 70%);
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .help {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        margin-top: 4px;
+      }
+
+      button {
+        cursor: pointer;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: color-mix(in oklab, var(--surface2), transparent 10%);
+        color: var(--text);
+        transition:
+          transform 120ms ease,
+          background 120ms ease,
+          border-color 120ms ease;
+      }
+
+      button:hover {
+        background: color-mix(in oklab, var(--surface2), transparent 0%);
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btn-primary {
+        border-color: color-mix(in oklab, var(--focus), var(--border) 60%);
+        background: color-mix(in oklab, var(--focus), transparent 80%);
+      }
+
+      .btn-success {
+        border-color: color-mix(in oklab, var(--success), var(--border) 60%);
+        background: color-mix(in oklab, var(--success), transparent 82%);
+      }
+
+      .btn-warning {
+        border-color: color-mix(in oklab, var(--warning), var(--border) 60%);
+        background: color-mix(in oklab, var(--warning), transparent 82%);
+      }
+
+      .btn-danger {
+        border-color: color-mix(in oklab, var(--danger), var(--border) 60%);
+        background: color-mix(in oklab, var(--danger), transparent 82%);
+      }
+
+      .btn-sm {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      .error-box {
+        display: none;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid color-mix(in oklab, var(--danger), var(--border) 55%);
+        background: color-mix(in oklab, var(--danger), transparent 88%);
+        color: var(--text);
+        font-size: 13px;
+        line-height: 1.3;
+      }
+
+      .error-box[aria-hidden="false"] {
+        display: block;
+      }
+
+      .success-box {
+        display: none;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid color-mix(in oklab, var(--success), var(--border) 55%);
+        background: color-mix(in oklab, var(--success), transparent 88%);
+        color: var(--text);
+        font-size: 13px;
+        line-height: 1.3;
+      }
+
+      .success-box[aria-hidden="false"] {
+        display: block;
+      }
+
+      .info-box {
+        display: none;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid color-mix(in oklab, var(--focus), var(--border) 55%);
+        background: color-mix(in oklab, var(--focus), transparent 88%);
+        color: var(--text);
+        font-size: 13px;
+        line-height: 1.3;
+      }
+
+      .info-box[aria-hidden="false"] {
+        display: block;
+      }
+
+      .is-invalid {
+        border-color: color-mix(in oklab, var(--danger), var(--border) 40%);
+        box-shadow: 0 0 0 4px color-mix(in oklab, var(--danger), transparent 80%);
+      }
+
+      .list-toolbar {
+        display: grid;
+        gap: 10px;
+      }
+
+      .list-toolbar__top {
+        display: flex;
+        gap: 10px;
+        align-items: end;
+        flex-wrap: wrap;
+      }
+
+      .list-toolbar__top .search {
+        flex: 1 1 320px;
+      }
+
+      .list-toolbar__bottom {
+        display: flex;
+        gap: 10px;
+        align-items: end;
+        flex-wrap: wrap;
+        justify-content: space-between;
+      }
+
+      .list-toolbar__period {
+        display: flex;
+        gap: 10px;
+        align-items: end;
+        flex-wrap: wrap;
+      }
+
+      .list-toolbar__period .field {
+        min-width: 160px;
+      }
+
+      .table-wrap {
+        overflow: auto;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+        min-width: 980px;
+      }
+
+      th,
+      td {
+        padding: 10px 10px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+        font-size: 13px;
+      }
+
+      th {
+        position: sticky;
+        top: 0;
+        background: color-mix(in oklab, var(--surface2), transparent 40%);
+        text-align: left;
+        font-weight: 600;
+        color: var(--text);
+        backdrop-filter: blur(8px);
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      tr.is-favorite {
+        background: color-mix(in oklab, var(--warning), transparent 94%);
+        border-left: 3px solid var(--warning);
+      }
+
+      .nowrap {
+        white-space: nowrap;
+      }
+
+      .note {
+        max-width: 380px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .empty {
+        padding: 14px 12px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 150px;
+      }
+
+      .favorite-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--warning);
+      }
+
+      #fileInput {
+        display: none;
+      }
+
+      .auto-save-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        border: 1px solid var(--border);
+        background: color-mix(in oklab, var(--surface2), transparent 20%);
+      }
+
+      .auto-save-status.active {
+        border-color: color-mix(in oklab, var(--success), var(--border) 60%);
+        background: color-mix(in oklab, var(--success), transparent 88%);
+        color: var(--success);
+      }
+
+      .manual-content {
+        line-height: 1.6;
+      }
+
+      .manual-content h3 {
+        margin: 24px 0 12px;
+        font-size: 18px;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .manual-content h4 {
+        margin: 16px 0 8px;
+        font-size: 15px;
+        color: var(--text);
+      }
+
+      .manual-content p {
+        margin: 8px 0;
+        color: var(--muted);
+      }
+
+      .manual-content ul,
+      .manual-content ol {
+        margin: 8px 0;
+        padding-left: 24px;
+        color: var(--muted);
+      }
+
+      .manual-content li {
+        margin: 4px 0;
+      }
+
+      .manual-content code {
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: color-mix(in oklab, var(--surface2), transparent 20%);
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        color: var(--focus);
+      }
+
+      .manual-content strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px;
+        margin: 12px 0;
+      }
+
+      .feature-card {
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: color-mix(in oklab, var(--surface2), transparent 60%);
+      }
+
+      .feature-card h5 {
+        margin: 0 0 6px;
+        font-size: 14px;
+        color: var(--text);
+      }
+
+      .feature-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .tip-box {
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid color-mix(in oklab, var(--success), var(--border) 55%);
+        background: color-mix(in oklab, var(--success), transparent 88%);
+        margin: 12px 0;
+      }
+
+      .tip-box strong {
+        color: var(--success);
+      }
+
+      .warning-box {
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid color-mix(in oklab, var(--warning), var(--border) 55%);
+        background: color-mix(in oklab, var(--warning), transparent 88%);
+        margin: 12px 0;
+      }
+
+      .warning-box strong {
+        color: var(--warning);
+      }
+
+      .manual-table {
+        width: 100%;
+        margin: 12px 0;
+        border-collapse: collapse;
+      }
+
+      .manual-table th,
+      .manual-table td {
+        padding: 8px;
+        border: 1px solid var(--border);
+        text-align: left;
+        font-size: 13px;
+      }
+
+      .manual-table th {
+        background: color-mix(in oklab, var(--surface2), transparent 40%);
+        font-weight: 600;
+      }
+
+      @media (max-width: 720px) {
+        table {
+          min-width: 0;
+        }
+
+        thead {
+          display: none;
+        }
+
+        tbody {
+          display: grid;
+          gap: 10px;
+          padding: 10px;
+        }
+
+        tr {
+          display: grid;
+          grid-template-columns: 1fr;
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          overflow: hidden;
+          background: color-mix(in oklab, var(--surface2), transparent 60%);
+        }
+
+        tr.is-favorite {
+          border-left: 3px solid var(--warning);
+        }
+
+        td {
+          display: grid;
+          grid-template-columns: 140px 1fr;
+          gap: 10px;
+          padding: 10px 12px;
+          border-bottom: 1px solid var(--border);
+        }
+
+        td::before {
+          content: attr(data-label);
+          color: var(--muted);
+          font-size: 12px;
+        }
+
+        td:last-child {
+          border-bottom: none;
+        }
+
+        .table-wrap {
+          overflow: visible;
+          background: transparent;
+          border: none;
+        }
+
+        .empty {
+          padding: 12px;
+        }
+
+        .action-buttons {
+          min-width: auto;
+        }
+
+        .feature-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+</head>
+<body>
+<div class="container">
+<header>
+<button class="theme-toggle" id="themeToggle" type="button">🌙 Тёмная</button>
+<h1>Мониторинг электродвигателей</h1>
+<p>Учёт электродвигателей и ремонтов с автосохранением: добавляйте, редактируйте записи, помечайте важные для протокола ЦЭО.</p>
+<div class="header-actions">
+<button id="selectFolderBtn" type="button" class="btn-warning">📁 Выбрать папку для автосохранения</button>
+<span id="autoSaveStatus" class="auto-save-status">Автосохранение выключено</span>
+<button id="saveDataBtn" type="button" class="btn-primary">💾 Экспорт базы в файл</button>
+<button id="loadDataBtn" type="button" class="btn-success">📂 Импорт базы из файла</button>
+<button id="showManualBtn" type="button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">📘 Инструкция</button>
+<input type="file" id="fileInput" accept=".json"/>
+</div>
+<div id="saveMessage" class="success-box" aria-hidden="true"></div>
+<div id="infoMessage" class="info-box" aria-hidden="true"></div>
+</header>
+
+<div class="tabs" role="tablist">
+<button class="tab" id="tabAdd" type="button" role="tab" aria-selected="true">Добавление</button>
+<button class="tab" id="tabInRepair" type="button" role="tab" aria-selected="false">В ремонте</button>
+<button class="tab" id="tabReady" type="button" role="tab" aria-selected="false">Готовые</button>
+<button class="tab" id="tabFavorites" type="button" role="tab" aria-selected="false">⭐ Для протокола ЦЭО</button>
+</div>
+
+<div class="tab-panels">
+
+<!-- Панель добавления -->
+<section class="card" id="panelAdd" role="tabpanel">
+<div class="card__header">
+<h2>Добавление / редактирование электродвигателя</h2>
+<div class="help">Обязательные поля: Участок, Наименование, Номер двигателя, Мощность.</div>
+</div>
+<div class="card__body">
+<form id="motorForm" novalidate>
+<div class="form-grid">
+<div class="field">
+<label for="area">Участок *</label>
+<input id="area" name="area" type="text" autocomplete="off"/>
+</div>
+<div class="field">
+<label for="name">Наименование двигателя *</label>
+<input id="name" name="name" type="text" autocomplete="off"/>
+</div>
+<div class="field">
+<label for="number">Номер двигателя *</label>
+<input id="number" name="number" type="text" autocomplete="off"/>
+</div>
+<div class="field">
+<label for="type">Тип двигателя</label>
+<input id="type" name="type" type="text" autocomplete="off"/>
+</div>
+<div class="field">
+<label for="powerKw">Мощность двигателя (кВт) *</label>
+<input id="powerKw" name="powerKw" type="number" step="0.1" min="0"/>
+</div>
+<div class="field">
+<label for="rpm">Обороты двигателя</label>
+<input id="rpm" name="rpm" type="number" step="1" min="0"/>
+</div>
+<div class="field">
+<label for="bearings">Подшипники двигателя</label>
+<input id="bearings" name="bearings" type="text" autocomplete="off"/>
+</div>
+<div class="field">
+<label for="repairVariant">Вариант ремонта</label>
+<select id="repairVariant" name="repairVariant">
+<option value="Капитальный">Капитальный</option>
+<option value="Средний">Средний</option>
+</select>
+</div>
+<div class="field" id="capRepairNumberWrap" hidden>
+<label for="capRepairNumber">Номер капитального ремонта</label>
+<input id="capRepairNumber" name="capRepairNumber" type="text" autocomplete="off"/>
+</div>
+<div class="field">
+<label for="repairDate">Дата ремонта</label>
+<input id="repairDate" name="repairDate" type="date"/>
+</div>
+<div class="field">
+<label for="outDate">Дата выхода из ремонта</label>
+<input id="outDate" name="outDate" type="date"/>
+</div>
+<div class="field span-2">
+<label for="note">Примечание</label>
+<textarea id="note" name="note"></textarea>
+</div>
+</div>
+<div id="formErrors" class="error-box" aria-hidden="true"></div>
+<div class="actions">
+<button class="btn-primary" type="submit" id="submitBtn">Добавить двигатель</button>
+<button type="button" id="cancelEditBtn" style="display:none">Отменить редактирование</button>
+<button type="reset">Очистить</button>
+</div>
+</form>
+</div>
+</section>
+
+<!-- Панель "В ремонте" -->
+<section class="card" id="panelInRepair" role="tabpanel" hidden>
+<div class="card__header">
+<h2>В ремонте</h2>
+<div class="meta" id="inRepairMeta">0 записей</div>
+</div>
+<div class="card__body">
+<div class="list-toolbar">
+<div class="list-toolbar__top">
+<div class="field search">
+<label for="searchInRepair">Поиск</label>
+<input id="searchInRepair" type="search" autocomplete="off" placeholder="Например: участок А1 11 кВт 1500 капитальный"/>
+</div>
+<button id="exportWordInRepair" type="button">Экспорт в Word</button>
+</div>
+<div class="list-toolbar__bottom">
+<div class="list-toolbar__period">
+<div class="field">
+<label for="filterDateFromInRepair">Период с</label>
+<input id="filterDateFromInRepair" type="date"/>
+</div>
+<div class="field">
+<label for="filterDateToInRepair">Период по</label>
+<input id="filterDateToInRepair" type="date"/>
+</div>
+</div>
+<div class="help">Период: от даты ремонта до даты выхода (обе даты должны быть заполнены в записи).</div>
+</div>
+</div>
+<div class="meta" id="filterMetaInRepair" style="margin-top: 8px">Показано: 0</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Участок</th>
+<th>Наименование</th>
+<th>Номер</th>
+<th>Тип</th>
+<th class="nowrap">Мощность (кВт)</th>
+<th>Обороты</th>
+<th>Подшипники</th>
+<th>Ремонт</th>
+<th class="nowrap">№ кап. ремонта</th>
+<th class="nowrap">Дата ремонта</th>
+<th class="nowrap">Дата выхода</th>
+<th>Примечание</th>
+<th class="nowrap">Действия</th>
+</tr>
+</thead>
+<tbody id="motorTbodyInRepair"></tbody>
+</table>
+<div id="emptyStateInRepair" class="empty">Нет данных. Добавьте первый двигатель.</div>
+</div>
+</div>
+</section>
+
+<!-- Панель "Готовые" -->
+<section class="card" id="panelReady" role="tabpanel" hidden>
+<div class="card__header">
+<h2>Готовые</h2>
+<div class="meta" id="readyMeta">0 записей</div>
+</div>
+<div class="card__body">
+<div class="list-toolbar">
+<div class="list-toolbar__top">
+<div class="field search">
+<label for="searchReady">Поиск</label>
+<input id="searchReady" type="search" autocomplete="off" placeholder="Например: участок А1 11 кВт 1500 капитальный"/>
+</div>
+<button id="exportWordReady" type="button">Экспорт в Word</button>
+</div>
+<div class="list-toolbar__bottom">
+<div class="list-toolbar__period">
+<div class="field">
+<label for="filterDateFromReady">Период с</label>
+<input id="filterDateFromReady" type="date"/>
+</div>
+<div class="field">
+<label for="filterDateToReady">Период по</label>
+<input id="filterDateToReady" type="date"/>
+</div>
+</div>
+<div class="help">Период: от даты ремонта до даты выхода (обе даты должны быть заполнены в записи).</div>
+</div>
+</div>
+<div class="meta" id="filterMetaReady" style="margin-top: 8px">Показано: 0</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Участок</th>
+<th>Наименование</th>
+<th>Номер</th>
+<th>Тип</th>
+<th class="nowrap">Мощность (кВт)</th>
+<th>Обороты</th>
+<th>Подшипники</th>
+<th>Ремонт</th>
+<th class="nowrap">№ кап. ремонта</th>
+<th class="nowrap">Дата ремонта</th>
+<th class="nowrap">Дата выхода</th>
+<th>Примечание</th>
+<th class="nowrap">Действия</th>
+</tr>
+</thead>
+<tbody id="motorTbodyReady"></tbody>
+</table>
+<div id="emptyStateReady" class="empty">Нет данных.</div>
+</div>
+</div>
+</section>
+
+<!-- Панель "Протокол ЦЭО" -->
+<section class="card" id="panelFavorites" role="tabpanel" hidden>
+<div class="card__header">
+<h2>⭐ Для протокола ЦЭО</h2>
+<div class="meta" id="favoritesMeta">0 записей</div>
+</div>
+<div class="card__body">
+<div class="list-toolbar">
+<div class="list-toolbar__top">
+<div class="field search">
+<label for="searchFavorites">Поиск</label>
+<input id="searchFavorites" type="search" autocomplete="off" placeholder="Например: участок А1 11 кВт 1500 капитальный"/>
+</div>
+<button id="exportWordFavorites" type="button">Экспорт в Word</button>
+</div>
+</div>
+<div class="meta" id="filterMetaFavorites" style="margin-top: 8px">Показано: 0</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Участок</th>
+<th>Наименование</th>
+<th>Номер</th>
+<th>Тип</th>
+<th class="nowrap">Мощность (кВт)</th>
+<th>Обороты</th>
+<th>Подшипники</th>
+<th>Ремонт</th>
+<th class="nowrap">№ кап. ремонта</th>
+<th class="nowrap">Дата ремонта</th>
+<th class="nowrap">Дата выхода</th>
+<th>Статус</th>
+<th>Примечание</th>
+<th class="nowrap">Действия</th>
+</tr>
+</thead>
+<tbody id="motorTbodyFavorites"></tbody>
+</table>
+<div id="emptyStateFavorites" class="empty">Нет избранных двигателей.</div>
+</div>
+</div>
+</section>
+
+<!-- Панель "Инструкция" -->
+<section class="card" id="panelManual" role="tabpanel" hidden>
+<div class="card__header">
+<h2>📘 Инструкция по использованию</h2>
+<button id="exportManualBtn" type="button" class="btn-success">📄 Скачать инструкцию в Word</button>
+</div>
+<div class="card__body manual-content">
+<h3>🎯 Назначение приложения</h3>
+<p>Веб-приложение для учёта электродвигателей в ремонте: позволяет добавлять двигатели, отслеживать их статус, помечать важные для протокола ЦЭО и автоматически сохранять базу данных в файл.</p>
+
+<h3>🚀 Быстрый старт</h3>
+<h4>Шаг 1: Откройте приложение</h4>
+<p>Откройте HTML файл в браузере. Рекомендуемые браузеры: <strong>Chrome</strong>, <strong>Edge</strong> или <strong>Яндекс Браузер</strong>.</p>
+
+<h4>Шаг 2: Настройте автосохранение</h4>
+<ol>
+<li>Нажмите кнопку <strong>"📁 Выбрать папку для автосохранения"</strong></li>
+<li>Выберите удобную папку (например, <code>Документы\Базы данных\</code>)</li>
+<li>Браузер попросит разрешение — нажмите <strong>"Разрешить при каждом посещении"</strong> или <strong>"View files"</strong> → <strong>"Save changes"</strong></li>
+<li>Готово! Файл <code>Двигатели_БД.json</code> будет автоматически обновляться</li>
+</ol>
+
+<div class="tip-box">
+<strong>💡 Совет:</strong> Статус автосохранения отображается зелёным цветом с названием выбранной папки.
+</div>
+
+<h3>📝 Основные функции</h3>
+
+<div class="feature-grid">
+<div class="feature-card">
+<h5>1️⃣ Добавление</h5>
+<p>Заполните форму и добавьте двигатель в базу. Обязательные поля: участок, наименование, номер, мощность.</p>
+</div>
+<div class="feature-card">
+<h5>2️⃣ В ремонте</h5>
+<p>Просмотр всех двигателей в ремонте. Можно искать, фильтровать по периоду и экспортировать в Word.</p>
+</div>
+<div class="feature-card">
+<h5>3️⃣ Готовые</h5>
+<p>Двигатели, вышедшие из ремонта. Помечайте готовыми через кнопку "✓ Готов" во вкладке "В ремонте".</p>
+</div>
+<div class="feature-card">
+<h5>4️⃣ Протокол ЦЭО</h5>
+<p>Избранные двигатели для протокола. Помечайте звёздочкой "☆ ЦЭО" в любой вкладке.</p>
+</div>
+</div>
+
+<h3>🔍 Поиск и фильтры</h3>
+
+<h4>Умный поиск понимает:</h4>
+<ul>
+<li><strong>Числа</strong> — ищет в мощности и оборотах: <code>11</code> найдёт "11 кВт" и "1100 об/мин"</li>
+<li><strong>Участки</strong> — <code>А1</code>, <code>ЦЭО</code>, <code>участок 5</code></li>
+<li><strong>Тип ремонта</strong> — <code>кап</code> (капитальный), <code>сред</code> (средний)</li>
+<li><strong>Несколько слов</strong> — <code>А1 11 1500</code> найдёт двигатели на участке А1, 11 кВт, 1500 об/мин</li>
+</ul>
+
+<h4>Примеры поиска:</h4>
+<table class="manual-table">
+<thead>
+<tr>
+<th>Запрос</th>
+<th>Результат</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>11</code></td>
+<td>Все двигатели 11 кВт</td>
+</tr>
+<tr>
+<td><code>А1</code></td>
+<td>Все двигатели участка А1</td>
+</tr>
+<tr>
+<td><code>кап</code></td>
+<td>Все капитальные ремонты</td>
+</tr>
+<tr>
+<td><code>А1 11 кап</code></td>
+<td>Двигатели А1, 11 кВт, капремонт</td>
+</tr>
+</tbody>
+</table>
+
+<h4>Фильтр по периоду:</h4>
+<p>Укажите <strong>"Период с"</strong> и <strong>"Период по"</strong> для фильтрации двигателей, ремонт которых происходил в этом промежутке. Работает только для записей с заполненными датами ремонта и выхода.</p>
+
+<h3>✏️ Редактирование и удаление</h3>
+
+<h4>Редактирование:</h4>
+<ol>
+<li>Нажмите <strong>"✎ Изменить"</strong> на нужной записи</li>
+<li>Откроется вкладка "Добавление" с заполненными полями</li>
+<li>Измените данные и нажмите <strong>"Сохранить изменения"</strong></li>
+<li>Или нажмите <strong>"Отменить редактирование"</strong> для отмены</li>
+</ol>
+
+<h4>Удаление:</h4>
+<p>Нажмите <strong>"✕ Удалить"</strong> на записи. Удаление происходит мгновенно и необратимо.</p>
+
+<h3>💾 Сохранение данных</h3>
+
+<h4>Автосохранение (рекомендуется):</h4>
+<ul>
+<li>После выбора папки данные сохраняются при каждом изменении</li>
+<li>Файл: <code>Двигатели_БД.json</code> (перезаписывается)</li>
+<li>Работает после перезагрузки страницы</li>
+</ul>
+
+<h4>Ручной экспорт:</h4>
+<ul>
+<li>Кнопка <strong>"💾 Экспорт базы в файл"</strong> создаёт файл с датой</li>
+<li>Скачивается в папку "Загрузки"</li>
+<li>Используйте для резервных копий</li>
+</ul>
+
+<h4>Импорт данных:</h4>
+<ul>
+<li>Кнопка <strong>"📂 Импорт базы из файла"</strong> восстанавливает данные</li>
+<li>Выберите ранее экспортированный <code>.json</code> файл</li>
+</ul>
+
+<div class="warning-box">
+<strong>⚠️ Внимание:</strong> Импорт заменяет ВСЕ текущие данные на данные из файла! Сделайте экспорт перед импортом для сохранности.
+</div>
+
+<h3>📊 Экспорт в Word</h3>
+<p>Кнопка <strong>"Экспорт в Word"</strong> доступна во вкладках "В ремонте", "Готовые" и "Протокол ЦЭО".</p>
+
+<h4>Что экспортируется:</h4>
+<ul>
+<li>Все записи, которые видны после применения фильтров</li>
+<li>Если поиск или период активны — только отфильтрованные данные</li>
+<li>Формат: Microsoft Word (.doc), альбомная ориентация A4</li>
+</ul>
+
+<h3>⚠️ Важные ограничения</h3>
+
+<h4>Автосохранение работает в:</h4>
+<ul>
+<li>✅ Chrome 86+, Edge 86+, Яндекс Браузер, Opera</li>
+<li>❌ Firefox, Safari, мобильные браузеры</li>
+</ul>
+
+<h4>Данные хранятся:</h4>
+<ol>
+<li><strong>В браузере</strong> (localStorage) — автоматически</li>
+<li><strong>В файле</strong> (если настроено) — автоматически</li>
+<li><strong>В Downloads</strong> (при ручном экспорте) — по кнопке</li>
+</ol>
+
+<div class="warning-box">
+<strong>⚠️ Внимание:</strong> Разрешения на доступ к папке могут сбрасываться при обновлении браузера — выберите папку заново.
+</div>
+
+<h3>🆘 Решение проблем</h3>
+
+<h4>"Автосохранение не работает"</h4>
+<ol>
+<li>Проверьте браузер — используйте Chrome/Edge/Яндекс</li>
+<li>Нажмите "Выбрать папку" заново</li>
+<li>Разрешите доступ к файлам в диалоге браузера</li>
+</ol>
+
+<h4>"Данные потерялись"</h4>
+<ol>
+<li>Перезагрузите страницу — данные в localStorage восстановятся</li>
+<li>Проверьте папку автосохранения — файл <code>Двигатели_БД.json</code></li>
+<li>Проверьте папку "Загрузки" — резервные копии с датой</li>
+</ol>
+
+<h4>"Кнопка '✓ Готов' не активна"</h4>
+<p>Заполните поле <strong>"Дата выхода из ремонта"</strong> перед тем, как помечать готовым. Нажмите "✎ Изменить", добавьте дату и сохраните.</p>
+
+<h3>💡 Рекомендации</h3>
+
+<div class="tip-box">
+<strong>Для начала работы:</strong>
+<ol>
+<li>Настройте автосохранение (выберите папку)</li>
+<li>Добавьте 2-3 тестовых записи</li>
+<li>Попробуйте поиск и фильтры</li>
+<li>Сделайте экспорт в Word</li>
+</ol>
+</div>
+
+<div class="tip-box">
+<strong>Для ежедневной работы:</strong>
+<ul>
+<li>Добавляйте новые двигатели через вкладку "Добавление"</li>
+<li>Отмечайте готовые кнопкой "✓ Готов"</li>
+<li>Помечайте важные звёздочкой "☆ ЦЭО"</li>
+<li>Используйте поиск для быстрого нахождения</li>
+</ul>
+</div>
+
+<div class="tip-box">
+<strong>Резервное копирование:</strong>
+<p>Раз в неделю делайте ручной экспорт кнопкой "💾 Экспорт базы в файл". Храните файлы в безопасном месте (облако, флешка).</p>
+</div>
+
+<h3>🎨 Дополнительно</h3>
+<p>Переключение темы: кнопка <strong>🌙 Тёмная / ☀️ Светлая</strong> в правом верхнем углу. Тема сохраняется автоматически.</p>
+
+<p style="margin-top: 24px; text-align: center; color: var(--success); font-weight: 600;">✅ Приятной работы! 🚀</p>
+</div>
+</section>
+
+</div>
+</div>
+
+<script>
+(async () => {
+const STORAGE_KEY = "motor_monitor_motors_v3";
+const THEME_KEY = "motor_monitor_theme";
+
+const themeToggle = document.getElementById("themeToggle");
+const form = document.getElementById("motorForm");
+const errorBox = document.getElementById("formErrors");
+const saveMessage = document.getElementById("saveMessage");
+const infoMessage = document.getElementById("infoMessage");
+
+const selectFolderBtn = document.getElementById("selectFolderBtn");
+const autoSaveStatus = document.getElementById("autoSaveStatus");
+const saveDataBtn = document.getElementById("saveDataBtn");
+const loadDataBtn = document.getElementById("loadDataBtn");
+const fileInput = document.getElementById("fileInput");
+const exportManualBtn = document.getElementById("exportManualBtn");
+
+const tabAdd = document.getElementById("tabAdd");
+const tabInRepair = document.getElementById("tabInRepair");
+const tabReady = document.getElementById("tabReady");
+const tabFavorites = document.getElementById("tabFavorites");
+const panelAdd = document.getElementById("panelAdd");
+const panelInRepair = document.getElementById("panelInRepair");
+const panelReady = document.getElementById("panelReady");
+const panelFavorites = document.getElementById("panelFavorites");
+const panelManual = document.getElementById("panelManual");
+
+const submitBtn = document.getElementById("submitBtn");
+const cancelEditBtn = document.getElementById("cancelEditBtn");
+
+const fields = {
+  area: document.getElementById("area"),
+  name: document.getElementById("name"),
+  number: document.getElementById("number"),
+  type: document.getElementById("type"),
+  powerKw: document.getElementById("powerKw"),
+  rpm: document.getElementById("rpm"),
+  bearings: document.getElementById("bearings"),
+  repairVariant: document.getElementById("repairVariant"),
+  capRepairNumber: document.getElementById("capRepairNumber"),
+  repairDate: document.getElementById("repairDate"),
+  outDate: document.getElementById("outDate"),
+  note: document.getElementById("note"),
+};
+const capRepairNumberWrap = document.getElementById("capRepairNumberWrap");
+
+const motors = [];
+let editingId = null;
+let targetDirectory = null;
+let autoSaveEnabled = false;
+
+// Тема
+function loadTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  return saved || "dark";
+}
+
+function applyTheme(theme) {
+  if (theme === "light") {
+    document.documentElement.setAttribute("data-theme", "light");
+    themeToggle.textContent = "☀️ Светлая";
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+    themeToggle.textContent = "🌙 Тёмная";
+  }
+  localStorage.setItem(THEME_KEY, theme);
+}
+
+function toggleTheme() {
+  const current = loadTheme();
+  const next = current === "dark" ? "light" : "dark";
+  applyTheme(next);
+}
+
+themeToggle.addEventListener("click", toggleTheme);
+applyTheme(loadTheme());
+
+// Автосохранение
+function openAutoSaveDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("MotorMonitorDB", 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains("handles")) {
+        db.createObjectStore("handles", { keyPath: "id" });
+      }
+    };
+  });
+}
+
+async function saveFolderHandleToDB(dirHandle) {
+  if (!window.indexedDB) return;
+  try {
+    const db = await openAutoSaveDB();
+    const tx = db.transaction("handles", "readwrite");
+    const store = tx.objectStore("handles");
+    store.put({ id: "targetFolder", handle: dirHandle });
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    console.error("Ошибка сохранения папки:", err);
+  }
+}
+
+async function loadFolderHandleFromDB() {
+  if (!window.indexedDB) return null;
+  try {
+    const db = await openAutoSaveDB();
+    const tx = db.transaction("handles", "readonly");
+    const store = tx.objectStore("handles");
+    const request = store.get("targetFolder");
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result?.handle || null);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.error("Ошибка загрузки папки:", err);
+    return null;
+  }
+}
+
+async function clearFolderHandleFromDB() {
+  if (!window.indexedDB) return;
+  try {
+    const db = await openAutoSaveDB();
+    const tx = db.transaction("handles", "readwrite");
+    const store = tx.objectStore("handles");
+    store.delete("targetFolder");
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    console.error("Ошибка удаления папки:", err);
+  }
+}
+
+async function verifyFolderPermission(dirHandle) {
+  if (!dirHandle) return false;
+  try {
+    const opts = { mode: "readwrite" };
+    if ((await dirHandle.queryPermission(opts)) === "granted") {
+      return true;
+    }
+    if ((await dirHandle.requestPermission(opts)) === "granted") {
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error("Ошибка проверки разрешений:", err);
+    return false;
+  }
+}
+
+async function selectSaveFolder() {
+  if (!window.showDirectoryPicker) {
+    alert("Ваш браузер не поддерживает выбор папки. Используйте Chrome, Edge или Яндекс Браузер версии 86+.");
+    return;
+  }
+  try {
+    targetDirectory = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await saveFolderHandleToDB(targetDirectory);
+    autoSaveEnabled = true;
+    updateAutoSaveStatus();
+    await autoSaveToCustomFolder();
+    showInfoMessage(`✅ Папка выбрана: "${targetDirectory.name}". Все изменения теперь автоматически сохраняются в файл "Двигатели_БД.json"`);
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error('Ошибка выбора папки:', err);
+      alert('Ошибка при выборе папки: ' + err.message);
+    }
+  }
+}
+
+async function initAutoSave() {
+  try {
+    const savedFolder = await loadFolderHandleFromDB();
+    if (savedFolder) {
+      const hasPermission = await verifyFolderPermission(savedFolder);
+      if (hasPermission) {
+        targetDirectory = savedFolder;
+        autoSaveEnabled = true;
+        updateAutoSaveStatus();
+        showInfoMessage(`✓ Автосохранение восстановлено. Сохранение в папку: "${savedFolder.name}"`);
+        return;
+      }
+    }
+    if (savedFolder) {
+      showInfoMessage('⚠️ Нужно заново выбрать папку для автосохранения (ограничение браузера). Нажмите "Выбрать папку для автосохранения".');
+      await clearFolderHandleFromDB();
+    }
+  } catch (err) {
+    console.error('Ошибка инициализации автосохранения:', err);
+    await clearFolderHandleFromDB();
+  }
+  targetDirectory = null;
+  autoSaveEnabled = false;
+  updateAutoSaveStatus();
+}
+
+async function autoSaveToCustomFolder() {
+  if (!autoSaveEnabled || !targetDirectory) return;
+  try {
+    const filename = 'Двигатели_БД.json';
+    const fileHandle = await targetDirectory.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    const data = {
+      version: "1.0",
+      exportDate: new Date().toISOString(),
+      motors: motors,
+    };
+    await writable.write(JSON.stringify(data, null, 2));
+    await writable.close();
+    console.log(`✓ Автосохранение: ${targetDirectory.name}/${filename}`);
+  } catch (err) {
+    console.error('Ошибка автосохранения:', err);
+    autoSaveEnabled = false;
+    targetDirectory = null;
+    await clearFolderHandleFromDB();
+    updateAutoSaveStatus();
+    showInfoMessage('⚠️ Автосохранение отключено из-за ошибки. Выберите папку заново.');
+  }
+}
+
+function updateAutoSaveStatus() {
+  if (autoSaveEnabled && targetDirectory) {
+    autoSaveStatus.textContent = `✓ Автосохранение: ${targetDirectory.name}`;
+    autoSaveStatus.classList.add('active');
+    selectFolderBtn.textContent = '📁 Изменить папку автосохранения';
+  } else {
+    autoSaveStatus.textContent = 'Автосохранение выключено';
+    autoSaveStatus.classList.remove('active');
+    selectFolderBtn.textContent = '📁 Выбрать папку для автосохранения';
+  }
+}
+
+selectFolderBtn.addEventListener('click', selectSaveFolder);
+
+window.addEventListener('beforeunload', () => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(motors));
+  } catch {}
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && autoSaveEnabled) {
+    autoSaveToCustomFolder();
+  }
+});
+
+
+// Работа с данными
+function loadMotors() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return;
+    motors.length = 0;
+    for (const item of parsed) {
+      const nm = normalizeMotor(item);
+      if (Number.isFinite(nm.powerKw) && nm.powerKw > 0) motors.push(nm);
+    }
+  } catch {}
+}
+
+function saveMotors() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(motors));
+    if (autoSaveEnabled && targetDirectory) {
+      autoSaveToCustomFolder();
+    }
+  } catch {}
+}
+
+function uid() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function escapeHtml(s) {
+  return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+}
+
+function normText(v) {
+  return String(v ?? "").trim();
+}
+
+function normalizeMotor(m) {
+  return {
+    id: String(m.id || uid()),
+    createdAt: typeof m.createdAt === "number" ? m.createdAt : Date.now(),
+    area: normText(m.area),
+    name: normText(m.name),
+    number: normText(m.number),
+    type: normText(m.type),
+    powerKw: Number(m.powerKw),
+    rpm: normText(m.rpm),
+    bearings: normText(m.bearings),
+    repairVariant: normText(m.repairVariant) || "Капитальный",
+    capRepairNumber: normText(m.capRepairNumber),
+    repairDate: normText(m.repairDate),
+    outDate: normText(m.outDate),
+    note: normText(m.note),
+    isReady: !!m.isReady,
+    isFavorite: !!m.isFavorite,
+  };
+}
+
+function saveDataToFile() {
+  const now = new Date();
+  const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const filename = `Двигатели_БД_${stamp}.json`;
+  const data = { version: "1.0", exportDate: now.toISOString(), motors: motors };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showSaveMessage(`База данных экспортирована в файл: ${filename} (${motors.length} записей)`);
+}
+
+function loadDataFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (!parsed.motors || !Array.isArray(parsed.motors)) {
+        alert("Ошибка: неверный формат файла базы данных.");
+        return;
+      }
+      motors.length = 0;
+      for (const item of parsed.motors) {
+        const nm = normalizeMotor(item);
+        if (Number.isFinite(nm.powerKw) && nm.powerKw > 0) motors.push(nm);
+      }
+      saveMotors();
+      renderAll();
+      showSaveMessage(`База данных импортирована: ${motors.length} записей из файла ${file.name}`);
+    } catch (err) {
+      alert(`Ошибка при чтении файла: ${err.message}`);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function showSaveMessage(text) {
+  saveMessage.textContent = text;
+  saveMessage.setAttribute("aria-hidden", "false");
+  setTimeout(() => saveMessage.setAttribute("aria-hidden", "true"), 5000);
+}
+
+function showInfoMessage(text) {
+  infoMessage.textContent = text;
+  infoMessage.setAttribute("aria-hidden", "false");
+  setTimeout(() => infoMessage.setAttribute("aria-hidden", "true"), 8000);
+}
+
+saveDataBtn.addEventListener("click", saveDataToFile);
+loadDataBtn.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    loadDataFromFile(file);
+    fileInput.value = "";
+  }
+});
+
+// Экспорт инструкции в Word
+function exportManualToWord() {
+  const now = new Date();
+  const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const html = `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Инструкция — Мониторинг электродвигателей</title>
+<style>
+@page { size: A4; margin: 2cm; }
+body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #333; }
+h1 { font-size: 18pt; margin: 0 0 12px; color: #1a1a1a; border-bottom: 2px solid #4a90e2; padding-bottom: 8px; }
+h2 { font-size: 14pt; margin: 18px 0 10px; color: #2c3e50; }
+h3 { font-size: 12pt; margin: 14px 0 8px; color: #34495e; }
+p { margin: 6px 0; }
+ul, ol { margin: 6px 0; padding-left: 24px; }
+li { margin: 4px 0; }
+code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 10pt; }
+strong { color: #2c3e50; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+th { background: #f4f4f4; font-weight: bold; }
+.tip { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0; }
+.warning { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px; margin: 10px 0; }
+</style>
+</head>
+<body>
+<h1>📘 Инструкция по использованию "Мониторинг электродвигателей"</h1>
+<p><em>Дата создания: ${stamp}</em></p>
+<h2>🎯 Назначение приложения</h2>
+<p>Веб-приложение для учёта электродвигателей в ремонте: позволяет добавлять двигатели, отслеживать их статус, помечать важные для протокола ЦЭО и автоматически сохранять базу данных в файл.</p>
+<h2>🚀 Быстрый старт</h2>
+<h3>Шаг 1: Откройте приложение</h3>
+<p>Откройте HTML файл в браузере. Рекомендуемые браузеры: <strong>Chrome</strong>, <strong>Edge</strong> или <strong>Яндекс Браузер</strong>.</p>
+<h3>Шаг 2: Настройте автосохранение</h3>
+<ol>
+<li>Нажмите кнопку <strong>"📁 Выбрать папку для автосохранения"</strong></li>
+<li>Выберите удобную папку (например, <code>Документы\\Базы данных\\</code>)</li>
+<li>Браузер попросит разрешение — нажмите <strong>"Разрешить при каждом посещении"</strong></li>
+<li>Готово! Файл <code>Двигатели_БД.json</code> будет автоматически обновляться</li>
+</ol>
+<div class="tip"><strong>💡 Совет:</strong> Статус автосохранения отображается зелёным цветом с названием выбранной папки.</div>
+<h2>📝 Основные функции</h2>
+<h3>1️⃣ Добавление двигателя</h3>
+<p>Заполните форму и добавьте двигатель в базу.</p>
+<p><strong>Обязательные поля:</strong> Участок, Наименование, Номер двигателя, Мощность (кВт)</p>
+<h3>2️⃣ В ремонте</h3>
+<p>Просмотр всех двигателей в ремонте. Доступны поиск, фильтр по периоду и экспорт в Word.</p>
+<h3>3️⃣ Готовые</h3>
+<p>Двигатели, вышедшие из ремонта. Помечайте готовыми через кнопку "✓ Готов".</p>
+<h3>4️⃣ Протокол ЦЭО</h3>
+<p>Избранные двигатели для протокола. Помечайте звёздочкой "☆ ЦЭО".</p>
+<h2>🔍 Поиск и фильтры</h2>
+<h3>Умный поиск понимает:</h3>
+<ul>
+<li><strong>Числа</strong> — ищет в мощности и оборотах</li>
+<li><strong>Участки</strong> — А1, ЦЭО, участок 5</li>
+<li><strong>Тип ремонта</strong> — кап (капитальный), сред (средний)</li>
+<li><strong>Несколько слов</strong> — комбинированный поиск</li>
+</ul>
+<h3>Примеры поиска:</h3>
+<table>
+<thead><tr><th>Запрос</th><th>Результат</th></tr></thead>
+<tbody>
+<tr><td><code>11</code></td><td>Все двигатели 11 кВт</td></tr>
+<tr><td><code>А1</code></td><td>Все двигатели участка А1</td></tr>
+<tr><td><code>кап</code></td><td>Все капитальные ремонты</td></tr>
+<tr><td><code>А1 11 кап</code></td><td>Двигатели А1, 11 кВт, капремонт</td></tr>
+</tbody>
+</table>
+<h2>✏️ Редактирование и удаление</h2>
+<p>Нажмите "✎ Изменить" для редактирования или "✕ Удалить" для удаления записи.</p>
+<h2>💾 Сохранение данных</h2>
+<p><strong>Автосохранение:</strong> После выбора папки данные сохраняются автоматически в файл <code>Двигатели_БД.json</code>.</p>
+<p><strong>Ручной экспорт:</strong> Кнопка "💾 Экспорт базы в файл" создаёт резервную копию с датой.</p>
+<div class="warning"><strong>⚠️ Внимание:</strong> Импорт заменяет ВСЕ текущие данные!</div>
+<h2>📊 Экспорт в Word</h2>
+<p>Кнопка "Экспорт в Word" создаёт .doc файл с отфильтрованными записями.</p>
+<h2>⚠️ Важные ограничения</h2>
+<p><strong>Автосохранение работает в:</strong> Chrome 86+, Edge 86+, Яндекс Браузер, Opera</p>
+<p><strong>Не работает в:</strong> Firefox, Safari, мобильные браузеры</p>
+<h2>🆘 Решение проблем</h2>
+<p><strong>"Автосохранение не работает"</strong> — Используйте Chrome/Edge/Яндекс, выберите папку заново.</p>
+<p><strong>"Данные потерялись"</strong> — Перезагрузите страницу, проверьте папку автосохранения.</p>
+<p><strong>"Кнопка '✓ Готов' не активна"</strong> — Заполните дату выхода из ремонта.</p>
+<h2>💡 Рекомендации</h2>
+<div class="tip">
+<strong>Для начала работы:</strong>
+<ol>
+<li>Настройте автосохранение</li>
+<li>Добавьте 2-3 тестовых записи</li>
+<li>Попробуйте поиск и фильтры</li>
+<li>Сделайте экспорт в Word</li>
+</ol>
+</div>
+<div class="tip"><strong>Резервное копирование:</strong> Раз в неделю делайте ручной экспорт. Храните файлы в облаке или на флешке.</div>
+<h2>🎨 Дополнительно</h2>
+<p>Переключение темы: кнопка "🌙 Тёмная / ☀️ Светлая" в правом верхнем углу.</p>
+<p style="margin-top: 24px; text-align: center; font-weight: bold; color: #4caf50;">✅ Приятной работы! 🚀</p>
+</body>
+</html>`;
+  const blob = new Blob([html], { type: "application/msword;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Инструкция_Мониторинг_Двигателей_${stamp}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showSaveMessage(`Инструкция скачана: Инструкция_Мониторинг_Двигателей_${stamp}.doc`);
+}
+
+exportManualBtn.addEventListener("click", exportManualToWord);
+
+
+// Форма
+fields.repairVariant.addEventListener("change", () => {
+  capRepairNumberWrap.hidden = fields.repairVariant.value !== "Капитальный";
+});
+
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  errorBox.setAttribute("aria-hidden", "true");
+  const validationErrors = [];
+  if (!fields.area.value.trim()) validationErrors.push("Укажите участок");
+  if (!fields.name.value.trim()) validationErrors.push("Укажите наименование");
+  if (!fields.number.value.trim()) validationErrors.push("Укажите номер двигателя");
+  const powerVal = Number(fields.powerKw.value);
+  if (!Number.isFinite(powerVal) || powerVal <= 0) validationErrors.push("Мощность должна быть положительным числом");
+  if (validationErrors.length) {
+    errorBox.textContent = validationErrors.join("; ") + ".";
+    errorBox.setAttribute("aria-hidden", "false");
+    return;
+  }
+  const formData = {
+    area: fields.area.value.trim(),
+    name: fields.name.value.trim(),
+    number: fields.number.value.trim(),
+    type: fields.type.value.trim(),
+    powerKw: powerVal,
+    rpm: fields.rpm.value.trim(),
+    bearings: fields.bearings.value.trim(),
+    repairVariant: fields.repairVariant.value,
+    capRepairNumber: fields.capRepairNumber.value.trim(),
+    repairDate: fields.repairDate.value,
+    outDate: fields.outDate.value,
+    note: fields.note.value.trim(),
+  };
+  if (editingId) {
+    const idx = motors.findIndex((m) => m.id === editingId);
+    if (idx >= 0) {
+      motors[idx] = { ...motors[idx], ...formData };
+      saveMotors();
+      renderAll();
+      showSaveMessage("Изменения сохранены.");
+      cancelEdit();
+    }
+  } else {
+    const newMotor = normalizeMotor({ id: uid(), createdAt: Date.now(), ...formData, isReady: false, isFavorite: false });
+    motors.push(newMotor);
+    saveMotors();
+    renderAll();
+    showSaveMessage("Двигатель добавлен.");
+    form.reset();
+  }
+});
+
+function editMotor(id) {
+  const m = motors.find((x) => x.id === id);
+  if (!m) return;
+  editingId = id;
+  fields.area.value = m.area;
+  fields.name.value = m.name;
+  fields.number.value = m.number;
+  fields.type.value = m.type;
+  fields.powerKw.value = m.powerKw;
+  fields.rpm.value = m.rpm;
+  fields.bearings.value = m.bearings;
+  fields.repairVariant.value = m.repairVariant;
+  fields.capRepairNumber.value = m.capRepairNumber;
+  fields.repairDate.value = m.repairDate;
+  fields.outDate.value = m.outDate;
+  fields.note.value = m.note;
+  capRepairNumberWrap.hidden = m.repairVariant !== "Капитальный";
+  submitBtn.textContent = "Сохранить изменения";
+  cancelEditBtn.style.display = "";
+  switchTab("add");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function cancelEdit() {
+  editingId = null;
+  submitBtn.textContent = "Добавить двигатель";
+  cancelEditBtn.style.display = "none";
+  form.reset();
+  capRepairNumberWrap.hidden = fields.repairVariant.value !== "Капитальный";
+}
+
+cancelEditBtn.addEventListener("click", cancelEdit);
+
+function deleteMotor(id) {
+  const idx = motors.findIndex((m) => m.id === id);
+  if (idx < 0) return;
+  motors.splice(idx, 1);
+  saveMotors();
+  renderAll();
+  showSaveMessage("Двигатель удалён.");
+}
+
+function markReady(id) {
+  const m = motors.find((x) => x.id === id);
+  if (!m) return;
+  m.isReady = true;
+  saveMotors();
+  renderAll();
+  showSaveMessage("Двигатель помечен как готовый.");
+}
+
+function toggleFavorite(id) {
+  const m = motors.find((x) => x.id === id);
+  if (!m) return;
+  m.isFavorite = !m.isFavorite;
+  saveMotors();
+  renderAll();
+  const status = m.isFavorite ? "добавлен в протокол ЦЭО" : "убран из протокола ЦЭО";
+  showSaveMessage(`Двигатель ${status}.`);
+}
+
+// Рендеринг таблиц
+function renderInRepairTable() {
+  const tbody = document.getElementById("motorTbodyInRepair");
+  const emptyState = document.getElementById("emptyStateInRepair");
+  const inRepair = motors.filter((m) => !m.isReady);
+  const searchQuery = document.getElementById("searchInRepair").value.trim().toLowerCase();
+  const dateFrom = document.getElementById("filterDateFromInRepair").value;
+  const dateTo = document.getElementById("filterDateToInRepair").value;
+  const filtered = inRepair.filter((m) => {
+    const searchMatch = !searchQuery || matchesSearch(m, searchQuery);
+    const dateMatch = matchesDateRange(m, dateFrom, dateTo);
+    return searchMatch && dateMatch;
+  });
+  document.getElementById("inRepairMeta").textContent = `${inRepair.length} записей`;
+  document.getElementById("filterMetaInRepair").textContent = `Показано: ${filtered.length}`;
+  if (!filtered.length) {
+    tbody.innerHTML = "";
+    emptyState.style.display = "block";
+    return;
+  }
+  emptyState.style.display = "none";
+  tbody.innerHTML = filtered.map((m) => {
+    const canMarkReady = !!m.outDate;
+    const readyBtnDisabled = !canMarkReady ? "disabled" : "";
+    const favoriteIcon = m.isFavorite ? "★" : "☆";
+    const favoriteClass = m.isFavorite ? "is-favorite" : "";
+    return `<tr class="${favoriteClass}">
+      <td data-label="Участок">${escapeHtml(m.area)}</td>
+      <td data-label="Наименование">${escapeHtml(m.name)}</td>
+      <td data-label="Номер">${escapeHtml(m.number)}</td>
+      <td data-label="Тип">${escapeHtml(m.type)}</td>
+      <td data-label="Мощность (кВт)" class="nowrap">${escapeHtml(m.powerKw)}</td>
+      <td data-label="Обороты">${escapeHtml(m.rpm)}</td>
+      <td data-label="Подшипники">${escapeHtml(m.bearings)}</td>
+      <td data-label="Ремонт">${escapeHtml(m.repairVariant)}</td>
+      <td data-label="№ кап. ремонта">${escapeHtml(m.capRepairNumber)}</td>
+      <td data-label="Дата ремонта" class="nowrap">${formatDate(m.repairDate)}</td>
+      <td data-label="Дата выхода" class="nowrap">${formatDate(m.outDate)}</td>
+      <td data-label="Примечание" class="note">${escapeHtml(m.note)}</td>
+      <td data-label="Действия" class="nowrap">
+        <div class="action-buttons">
+          <button class="btn-sm" onclick="editMotor('${m.id}')">✎ Изменить</button>
+          <button class="btn-sm btn-success" onclick="markReady('${m.id}')" ${readyBtnDisabled}>✓ Готов</button>
+          <button class="btn-sm btn-warning" onclick="toggleFavorite('${m.id}')">${favoriteIcon} ЦЭО</button>
+          <button class="btn-sm btn-danger" onclick="deleteMotor('${m.id}')">✕ Удалить</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function renderReadyTable() {
+  const tbody = document.getElementById("motorTbodyReady");
+  const emptyState = document.getElementById("emptyStateReady");
+  const ready = motors.filter((m) => m.isReady);
+  const searchQuery = document.getElementById("searchReady").value.trim().toLowerCase();
+  const dateFrom = document.getElementById("filterDateFromReady").value;
+  const dateTo = document.getElementById("filterDateToReady").value;
+  const filtered = ready.filter((m) => {
+    const searchMatch = !searchQuery || matchesSearch(m, searchQuery);
+    const dateMatch = matchesDateRange(m, dateFrom, dateTo);
+    return searchMatch && dateMatch;
+  });
+  document.getElementById("readyMeta").textContent = `${ready.length} записей`;
+  document.getElementById("filterMetaReady").textContent = `Показано: ${filtered.length}`;
+  if (!filtered.length) {
+    tbody.innerHTML = "";
+    emptyState.style.display = "block";
+    return;
+  }
+  emptyState.style.display = "none";
+  tbody.innerHTML = filtered.map((m) => {
+    const favoriteIcon = m.isFavorite ? "★" : "☆";
+    const favoriteClass = m.isFavorite ? "is-favorite" : "";
+    return `<tr class="${favoriteClass}">
+      <td data-label="Участок">${escapeHtml(m.area)}</td>
+      <td data-label="Наименование">${escapeHtml(m.name)}</td>
+      <td data-label="Номер">${escapeHtml(m.number)}</td>
+      <td data-label="Тип">${escapeHtml(m.type)}</td>
+      <td data-label="Мощность (кВт)" class="nowrap">${escapeHtml(m.powerKw)}</td>
+      <td data-label="Обороты">${escapeHtml(m.rpm)}</td>
+      <td data-label="Подшипники">${escapeHtml(m.bearings)}</td>
+      <td data-label="Ремонт">${escapeHtml(m.repairVariant)}</td>
+      <td data-label="№ кап. ремонта">${escapeHtml(m.capRepairNumber)}</td>
+      <td data-label="Дата ремонта" class="nowrap">${formatDate(m.repairDate)}</td>
+      <td data-label="Дата выхода" class="nowrap">${formatDate(m.outDate)}</td>
+      <td data-label="Примечание" class="note">${escapeHtml(m.note)}</td>
+      <td data-label="Действия" class="nowrap">
+        <div class="action-buttons">
+          <button class="btn-sm" onclick="editMotor('${m.id}')">✎ Изменить</button>
+          <button class="btn-sm btn-warning" onclick="toggleFavorite('${m.id}')">${favoriteIcon} ЦЭО</button>
+          <button class="btn-sm btn-danger" onclick="deleteMotor('${m.id}')">✕ Удалить</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function renderFavoritesTable() {
+  const tbody = document.getElementById("motorTbodyFavorites");
+  const emptyState = document.getElementById("emptyStateFavorites");
+  const favorites = motors.filter((m) => m.isFavorite);
+  const searchQuery = document.getElementById("searchFavorites").value.trim().toLowerCase();
+  const filtered = favorites.filter((m) => !searchQuery || matchesSearch(m, searchQuery));
+  document.getElementById("favoritesMeta").textContent = `${favorites.length} записей`;
+  document.getElementById("filterMetaFavorites").textContent = `Показано: ${filtered.length}`;
+  if (!filtered.length) {
+    tbody.innerHTML = "";
+    emptyState.style.display = "block";
+    return;
+  }
+  emptyState.style.display = "none";
+  tbody.innerHTML = filtered.map((m) => {
+    const statusText = m.isReady ? "Готов" : "В ремонте";
+    return `<tr class="is-favorite">
+      <td data-label="Участок">${escapeHtml(m.area)}</td>
+      <td data-label="Наименование">${escapeHtml(m.name)}</td>
+      <td data-label="Номер">${escapeHtml(m.number)}</td>
+      <td data-label="Тип">${escapeHtml(m.type)}</td>
+      <td data-label="Мощность (кВт)" class="nowrap">${escapeHtml(m.powerKw)}</td>
+      <td data-label="Обороты">${escapeHtml(m.rpm)}</td>
+      <td data-label="Подшипники">${escapeHtml(m.bearings)}</td>
+      <td data-label="Ремонт">${escapeHtml(m.repairVariant)}</td>
+      <td data-label="№ кап. ремонта">${escapeHtml(m.capRepairNumber)}</td>
+      <td data-label="Дата ремонта" class="nowrap">${formatDate(m.repairDate)}</td>
+      <td data-label="Дата выхода" class="nowrap">${formatDate(m.outDate)}</td>
+      <td data-label="Статус">${statusText}</td>
+      <td data-label="Примечание" class="note">${escapeHtml(m.note)}</td>
+      <td data-label="Действия" class="nowrap">
+        <div class="action-buttons">
+          <button class="btn-sm" onclick="editMotor('${m.id}')">✎ Изменить</button>
+          <button class="btn-sm btn-warning" onclick="toggleFavorite('${m.id}')">★ Убрать из ЦЭО</button>
+          <button class="btn-sm btn-danger" onclick="deleteMotor('${m.id}')">✕ Удалить</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function renderAll() {
+  renderInRepairTable();
+  renderReadyTable();
+  renderFavoritesTable();
+}
+
+function formatDate(d) {
+  if (!d) return "—";
+  const [y, m, day] = d.split("-");
+  return `${day}.${m}.${y}`;
+}
+
+function matchesSearch(m, query) {
+  const tokens = query.split(/\s+/).filter(Boolean);
+  return tokens.every((token) => {
+    const areaMatch = m.area.toLowerCase().includes(token);
+    const nameMatch = m.name.toLowerCase().includes(token);
+    const numberMatch = m.number.toLowerCase().includes(token);
+    const typeMatch = m.type.toLowerCase().includes(token);
+    const powerMatch = String(m.powerKw).includes(token);
+    const rpmMatch = m.rpm.toLowerCase().includes(token);
+    const bearingsMatch = m.bearings.toLowerCase().includes(token);
+    const repairMatch = m.repairVariant.toLowerCase().includes(token);
+    const capMatch = m.capRepairNumber.toLowerCase().includes(token);
+    const noteMatch = m.note.toLowerCase().includes(token);
+    return areaMatch || nameMatch || numberMatch || typeMatch || powerMatch || rpmMatch || bearingsMatch || repairMatch || capMatch || noteMatch;
+  });
+}
+
+function matchesDateRange(m, fromDate, toDate) {
+  if (!fromDate && !toDate) return true;
+  if (!m.repairDate || !m.outDate) return false;
+  const repairTs = new Date(m.repairDate).getTime();
+  const outTs = new Date(m.outDate).getTime();
+  const fromTs = fromDate ? new Date(fromDate).getTime() : -Infinity;
+  const toTs = toDate ? new Date(toDate).getTime() : Infinity;
+  return repairTs >= fromTs && outTs <= toTs;
+}
+
+document.getElementById("searchInRepair").addEventListener("input", renderInRepairTable);
+document.getElementById("searchReady").addEventListener("input", renderReadyTable);
+document.getElementById("searchFavorites").addEventListener("input", renderFavoritesTable);
+document.getElementById("filterDateFromInRepair").addEventListener("change", renderInRepairTable);
+document.getElementById("filterDateToInRepair").addEventListener("change", renderInRepairTable);
+document.getElementById("filterDateFromReady").addEventListener("change", renderReadyTable);
+document.getElementById("filterDateToReady").addEventListener("change", renderReadyTable);
+
+// Экспорт в Word
+function exportToWord(listName, rows) {
+  const now = new Date();
+  const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const html = `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Двигатели — ${listName}</title>
+<style>
+@page { size: A4 landscape; margin: 1.5cm; }
+body { font-family: Arial, sans-serif; font-size: 10pt; }
+h1 { font-size: 14pt; margin: 0 0 12px; text-align: center; }
+table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+th, td { border: 1px solid #333; padding: 6px; text-align: left; vertical-align: top; }
+th { background: #e0e0e0; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>Электродвигатели: ${listName}</h1>
+<p>Дата экспорта: ${stamp}</p>
+<table>${rows}</table>
+</body>
+</html>`;
+  const blob = new Blob([html], { type: "application/msword;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Двигатели_${listName.replace(/\s+/g, "_")}_${stamp}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+document.getElementById("exportWordInRepair").addEventListener("click", () => {
+  const inRepair = motors.filter((m) => !m.isReady);
+  const searchQuery = document.getElementById("searchInRepair").value.trim().toLowerCase();
+  const dateFrom = document.getElementById("filterDateFromInRepair").value;
+  const dateTo = document.getElementById("filterDateToInRepair").value;
+  const filtered = inRepair.filter((m) => {
+    const searchMatch = !searchQuery || matchesSearch(m, searchQuery);
+    const dateMatch = matchesDateRange(m, dateFrom, dateTo);
+    return searchMatch && dateMatch;
+  });
+  if (!filtered.length) {
+    alert("Нет данных для экспорта. Измените фильтры.");
+    return;
+  }
+  const header = `<thead><tr><th>Участок</th><th>Наименование</th><th>Номер</th><th>Тип</th><th>Мощность (кВт)</th><th>Обороты</th><th>Подшипники</th><th>Ремонт</th><th>№ кап. ремонта</th><th>Дата ремонта</th><th>Дата выхода</th><th>Примечание</th></tr></thead>`;
+  const body = `<tbody>${filtered.map((m) => `<tr><td>${escapeHtml(m.area)}</td><td>${escapeHtml(m.name)}</td><td>${escapeHtml(m.number)}</td><td>${escapeHtml(m.type)}</td><td>${escapeHtml(m.powerKw)}</td><td>${escapeHtml(m.rpm)}</td><td>${escapeHtml(m.bearings)}</td><td>${escapeHtml(m.repairVariant)}</td><td>${escapeHtml(m.capRepairNumber)}</td><td>${formatDate(m.repairDate)}</td><td>${formatDate(m.outDate)}</td><td>${escapeHtml(m.note)}</td></tr>`).join("")}</tbody>`;
+  exportToWord("В ремонте", header + body);
+});
+
+document.getElementById("exportWordReady").addEventListener("click", () => {
+  const ready = motors.filter((m) => m.isReady);
+  const searchQuery = document.getElementById("searchReady").value.trim().toLowerCase();
+  const dateFrom = document.getElementById("filterDateFromReady").value;
+  const dateTo = document.getElementById("filterDateToReady").value;
+  const filtered = ready.filter((m) => {
+    const searchMatch = !searchQuery || matchesSearch(m, searchQuery);
+    const dateMatch = matchesDateRange(m, dateFrom, dateTo);
+    return searchMatch && dateMatch;
+  });
+  if (!filtered.length) {
+    alert("Нет данных для экспорта. Измените фильтры.");
+    return;
+  }
+  const header = `<thead><tr><th>Участок</th><th>Наименование</th><th>Номер</th><th>Тип</th><th>Мощность (кВт)</th><th>Обороты</th><th>Подшипники</th><th>Ремонт</th><th>№ кап. ремонта</th><th>Дата ремонта</th><th>Дата выхода</th><th>Примечание</th></tr></thead>`;
+  const body = `<tbody>${filtered.map((m) => `<tr><td>${escapeHtml(m.area)}</td><td>${escapeHtml(m.name)}</td><td>${escapeHtml(m.number)}</td><td>${escapeHtml(m.type)}</td><td>${escapeHtml(m.powerKw)}</td><td>${escapeHtml(m.rpm)}</td><td>${escapeHtml(m.bearings)}</td><td>${escapeHtml(m.repairVariant)}</td><td>${escapeHtml(m.capRepairNumber)}</td><td>${formatDate(m.repairDate)}</td><td>${formatDate(m.outDate)}</td><td>${escapeHtml(m.note)}</td></tr>`).join("")}</tbody>`;
+  exportToWord("Готовые", header + body);
+});
+
+document.getElementById("exportWordFavorites").addEventListener("click", () => {
+  const favorites = motors.filter((m) => m.isFavorite);
+  const searchQuery = document.getElementById("searchFavorites").value.trim().toLowerCase();
+  const filtered = favorites.filter((m) => !searchQuery || matchesSearch(m, searchQuery));
+  if (!filtered.length) {
+    alert("Нет данных для экспорта. Измените фильтры.");
+    return;
+  }
+  const header = `<thead><tr><th>Участок</th><th>Наименование</th><th>Номер</th><th>Тип</th><th>Мощность (кВт)</th><th>Обороты</th><th>Подшипники</th><th>Ремонт</th><th>№ кап. ремонта</th><th>Дата ремонта</th><th>Дата выхода</th><th>Статус</th><th>Примечание</th></tr></thead>`;
+  const body = `<tbody>${filtered.map((m) => {
+    const status = m.isReady ? "Готов" : "В ремонте";
+    return `<tr><td>${escapeHtml(m.area)}</td><td>${escapeHtml(m.name)}</td><td>${escapeHtml(m.number)}</td><td>${escapeHtml(m.type)}</td><td>${escapeHtml(m.powerKw)}</td><td>${escapeHtml(m.rpm)}</td><td>${escapeHtml(m.bearings)}</td><td>${escapeHtml(m.repairVariant)}</td><td>${escapeHtml(m.capRepairNumber)}</td><td>${formatDate(m.repairDate)}</td><td>${formatDate(m.outDate)}</td><td>${status}</td><td>${escapeHtml(m.note)}</td></tr>`;
+  }).join("")}</tbody>`;
+  exportToWord("Протокол ЦЭО", header + body);
+});
+
+// Табы
+function switchTab(tab) {
+  [tabAdd, tabInRepair, tabReady, tabFavorites].forEach((t) => t.setAttribute("aria-selected", "false"));
+  [panelAdd, panelInRepair, panelReady, panelFavorites, panelManual].forEach((p) => p.hidden = true);
+  if (tab === "add") {
+    tabAdd.setAttribute("aria-selected", "true");
+    panelAdd.hidden = false;
+  } else if (tab === "inRepair") {
+    tabInRepair.setAttribute("aria-selected", "true");
+    panelInRepair.hidden = false;
+  } else if (tab === "ready") {
+    tabReady.setAttribute("aria-selected", "true");
+    panelReady.hidden = false;
+  } else if (tab === "favorites") {
+    tabFavorites.setAttribute("aria-selected", "true");
+    panelFavorites.hidden = false;
+  } else if (tab === "manual") {
+    panelManual.hidden = false;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
+tabAdd.addEventListener("click", () => switchTab("add"));
+tabInRepair.addEventListener("click", () => switchTab("inRepair"));
+tabReady.addEventListener("click", () => switchTab("ready"));
+tabFavorites.addEventListener("click", () => switchTab("favorites"));
+const showManualBtn = document.getElementById("showManualBtn");
+showManualBtn.addEventListener("click", () => switchTab("manual"));
+
+// Глобальные функции
+window.editMotor = editMotor;
+window.deleteMotor = deleteMotor;
+window.markReady = markReady;
+window.toggleFavorite = toggleFavorite;
+
+// Инициализация
+loadMotors();
+await initAutoSave();
+renderAll();
+})();
+</script>
+</body>
+</html>
