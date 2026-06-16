@@ -1,6 +1,0 @@
-<Solution>
-  <Project Path="QuizApp123.Setup/QuizApp123.Setup.vdproj" Type="Installer">
-    <Build />
-  </Project>
-  <Project Path="QuizApp123/QuizApp123.csproj" />
-</Solution>
